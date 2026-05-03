@@ -50,10 +50,11 @@ header h1 { font-size: 21px; font-weight: 700; letter-spacing: 2px; color: #e945
 .setup-card h2 { font-size: 17px; margin-bottom: 16px; color: #e94560; text-align: center; }
 .person-row {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 0;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  padding: 10px 0;
   border-bottom: 1px solid #1a3a5c;
+  align-items: center;
 }
 .person-row:last-child { border-bottom: none; }
 .person-row input, .person-row select {
@@ -66,11 +67,11 @@ header h1 { font-size: 21px; font-weight: 700; letter-spacing: 2px; color: #e945
   outline: none;
 }
 .person-row input:focus, .person-row select:focus { border-color: #e94560; }
-.person-row input[type="text"] { width: 76px; }
-.person-row input[type="date"] { width: 134px; color-scheme: dark; }
-.person-row select { width: 80px; }
+.person-row input[type="text"] { flex: 1; min-width: 60px; }
+.person-row input[type="date"] { flex: 1; min-width: 100px; color-scheme: dark; }
+.person-row select { width: 80px; flex-shrink: 0; }
 .person-row input[type="color"] {
-  width: 32px; height: 28px;
+  width: 30px; height: 28px;
   padding: 2px;
   border-radius: 4px;
   cursor: pointer;
@@ -78,7 +79,8 @@ header h1 { font-size: 21px; font-weight: 700; letter-spacing: 2px; color: #e945
 }
 .person-row input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
 .person-row input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
-.shift-label { font-size: 12px; color: #a0aec0; white-space: nowrap; }
+.person-field { display: flex; flex-direction: column; gap: 3px; }
+.person-field label { font-size: 11px; color: #a0aec0; white-space: nowrap; }
 .btn-row { display: flex; gap: 10px; margin-top: 16px; justify-content: center; }
 .btn {
   padding: 9px 24px;
@@ -229,6 +231,14 @@ header h1 { font-size: 21px; font-weight: 700; letter-spacing: 2px; color: #e945
 .empty-state { text-align: center; padding: 50px 20px; color: #a0aec0; }
 .empty-state h3 { font-size: 15px; margin-bottom: 6px; }
 .empty-state p { font-size: 12px; }
+@media (max-width: 600px) {
+  header h1 { font-size: 17px; }
+  .tab-btn { padding: 6px 14px; font-size: 12px; }
+  .setup-card { padding: 16px 12px; }
+  .shift-bar { height: 12px; font-size: 7px; padding: 0 2px; }
+  .person-row select { width: 70px; }
+}
+
 @media (max-width: 900px) {
   .shift-bar { height: 13px; font-size: 8px; padding: 0 2px; }
 }
@@ -445,15 +455,19 @@ function renderSetup() {
       <div class="person-row">
         <input type="color" value="${colors[i]}" class="person-color-inp" title="自定义颜色">
         <input type="text" value="${names[i]}" placeholder="姓名" class="person-name">
-        <span class="shift-label">起始日期</span>
-        <input type="date" value="${si.date}" class="start-date">
-        <span class="shift-label">该日班次</span>
-        <select class="start-shift">
-          <option value="0" ${si.shift===0?'selected':''}>半天</option>
-          <option value="1" ${si.shift===1?'selected':''}>全天</option>
-          <option value="2" ${si.shift===2?'selected':''}>24H</option>
-          <option value="3" ${si.shift===3?'selected':''}>休息</option>
-        </select>
+        <div class="person-field">
+          <label>起始日期</label>
+          <input type="date" value="${si.date}" class="start-date">
+        </div>
+        <div class="person-field">
+          <label>该日班次</label>
+          <select class="start-shift">
+            <option value="0" ${si.shift===0?'selected':''}>半天</option>
+            <option value="1" ${si.shift===1?'selected':''}>全天</option>
+            <option value="2" ${si.shift===2?'selected':''}>24H</option>
+            <option value="3" ${si.shift===3?'selected':''}>休息</option>
+          </select>
+        </div>
       </div>`;
   }
 }
