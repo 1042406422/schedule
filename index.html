@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>五人轮班排班系统</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif; background: #1a1a2e; color: #eee; overflow: hidden; }
+#app { display: flex; flex-direction: column; height: 100vh; }
+
+header {
+  background: linear-gradient(135deg, #16213e, #0f3460);
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #1a3a5c;
+  flex-shrink: 0;
+}
+header h1 { font-size: 21px; font-weight: 700; letter-spacing: 2px; color: #e94560; }
+.tabs { display: flex; gap: 4px; }
+.tab-btn {
+  padding: 7px 20px;
+  border: 1px solid #1a3a5c;
+  background: transparent;
+  color: #a0aec0;
+  cursor: pointer;
+  font-size: 13px;
+  border-radius: 6px 6px 0 0;
+  transition: all 0.2s;
+}
+.tab-btn:hover { color: #e94560; border-color: #e94560; }
+.tab-btn.active { background: #e94560; color: #fff; border-color: #e94560; }
+
+.main-content { flex: 1; overflow: hidden; display: flex; }
+.panel { display: none; flex: 1; overflow: auto; padding: 16px; }
+.panel.active { display: flex; }
+
+/* ===== SETUP PANEL ===== */
+#setup-panel { flex-direction: column; align-items: center; padding-top: 16px; }
+.setup-card {
+  background: #16213e;
+  border-radius: 12px;
+  padding: 20px 32px;
+  width: 100%;
+  max-width: 780px;
+  border: 1px solid #1a3a5c;
+}
+.setup-card h2 { font-size: 17px; margin-bottom: 16px; color: #e94560; text-align: center; }
+.person-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #1a3a5c;
+}
+.person-row:last-child { border-bottom: none; }
+.person-row input, .person-row select {
+  padding: 6px 8px;
+  border: 1px solid #1a3a5c;
+  background: #1a1a2e;
+  color: #eee;
+  border-radius: 6px;
+  font-size: 13px;
+  outline: none;
+}
+.person-row input:focus, .person-row select:focus { border-color: #e94560; }
+.person-row input[type="text"] { width: 76px; }
+.person-row input[type="date"] { width: 134px; color-scheme: dark; }
+.person-row select { width: 80px; }
+.person-row input[type="color"] {
+  width: 32px; height: 28px;
+  padding: 2px;
+  border-radius: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.person-row input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.person-row input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
+.shift-label { font-size: 12px; color: #a0aec0; white-space: nowrap; }
+.btn-row { display: flex; gap: 10px; margin-top: 16px; justify-content: center; }
+.btn {
+  padding: 9px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-primary { background: #e94560; color: #fff; }
+.btn-primary:hover { background: #d63850; transform: translateY(-1px); box-shadow: 0 4px 15px rgba(233,69,96,0.4); }
+.btn-secondary { background: #1a3a5c; color: #a0aec0; border: 1px solid #2a4a6c; }
+.btn-secondary:hover { background: #2a4a6c; color: #fff; }
+.hint { margin-top: 12px; font-size: 12px; color: #a0aec0; text-align: center; line-height: 1.6; }
+
+/* ===== CALENDAR ===== */
+#calendar-panel { flex-direction: column; }
+.cal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+.cal-nav button {
+  width: 30px; height: 30px;
+  border: 1px solid #1a3a5c;
+  background: #16213e;
+  color: #eee;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 15px;
+  transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center;
+}
+.cal-nav button:hover { background: #e94560; border-color: #e94560; }
+.cal-nav .month-year { font-size: 18px; font-weight: 700; min-width: 140px; text-align: center; color: #fff; }
+.cal-nav select { padding: 4px 8px; background: #16213e; color: #eee; border: 1px solid #1a3a5c; border-radius: 6px; font-size: 13px; }
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  flex: 1;
+  min-height: 0;
+}
+.cal-header {
+  text-align: center;
+  padding: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #a0aec0;
+  background: #16213e;
+  border-radius: 3px;
+}
+.cal-header.weekend { color: #e94560; }
+.cal-cell {
+  background: #16213e;
+  border-radius: 5px;
+  padding: 3px 3px 2px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid transparent;
+  transition: all 0.15s;
+  overflow: hidden;
+  min-height: 0;
+}
+.cal-cell:hover { border-color: #e94560; transform: scale(1.03); z-index: 2; }
+.cal-cell.today { border-color: #e94560; box-shadow: 0 0 6px rgba(233,69,96,0.3); }
+.cal-cell.weekend { background: #1a1f35; }
+.cal-cell.other-month { opacity: 0.3; }
+.cal-cell .day-num { font-size: 11px; font-weight: 600; margin-bottom: 2px; flex-shrink: 0; }
+.cal-cell.weekend .day-num { color: #e94560; }
+.cal-bars { display: flex; flex-direction: column; gap: 2px; flex: 1; justify-content: flex-start; }
+.shift-bar {
+  height: 15px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  font-size: 9px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+  cursor: default;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.4);
+}
+.shift-bar.w-1 { width: 33%; }
+.shift-bar.w-2 { width: 66%; }
+.shift-bar.w-3 { width: 100%; }
+
+.cal-cell.holiday { border-color: #ff6b6b55; }
+.holiday-badge {
+  font-size: 8px;
+  background: #ff6b6b;
+  color: #fff;
+  padding: 1px 3px;
+  border-radius: 3px;
+  margin-left: 3px;
+  vertical-align: middle;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+/* ===== LEGEND ===== */
+.legend {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 6px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 11px;
+  color: #a0aec0;
+}
+.legend-sep { width: 1px; height: 14px; background: #1a3a5c; margin: 0 6px; }
+.legend-person { display: flex; align-items: center; gap: 4px; user-select: none; }
+.legend-person-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.legend-chk { width: 13px; height: 13px; margin: 0; accent-color: #e94560; cursor: pointer; flex-shrink: 0; }
+.legend-holiday-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; background: #ff6b6b; }
+.legend-bar-demo { display: flex; align-items: center; gap: 3px; }
+.legend-bar-demo .demo-bar { height: 8px; border-radius: 2px; background: #888; }
+
+/* ===== STATS ===== */
+#stats-panel { flex-direction: column; align-items: center; padding-top: 12px; }
+.stats-card {
+  background: #16213e;
+  border-radius: 12px;
+  padding: 18px 26px;
+  width: 100%;
+  max-width: 880px;
+  border: 1px solid #1a3a5c;
+}
+.stats-card h2 { margin-bottom: 12px; color: #e94560; font-size: 17px; }
+.stats-table { width: 100%; border-collapse: collapse; }
+.stats-table th, .stats-table td { padding: 8px 10px; text-align: center; font-size: 13px; border-bottom: 1px solid #1a3a5c; }
+.stats-table th { color: #a0aec0; font-weight: 600; font-size: 12px; }
+.stats-table tr:hover td { background: rgba(233,69,96,0.07); }
+.stats-table .total-row td { font-weight: 700; border-top: 2px solid #e94560; color: #e94560; }
+.year-selector-stats { margin-bottom: 12px; display: flex; gap: 8px; align-items: center; }
+.year-selector-stats select { padding: 5px 10px; background: #16213e; color: #eee; border: 1px solid #1a3a5c; border-radius: 6px; font-size: 13px; }
+.empty-state { text-align: center; padding: 50px 20px; color: #a0aec0; }
+.empty-state h3 { font-size: 15px; margin-bottom: 6px; }
+.empty-state p { font-size: 12px; }
+@media (max-width: 900px) {
+  .shift-bar { height: 13px; font-size: 8px; padding: 0 2px; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>五人轮班排班系统</h1>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('setup')">设置</button>
+      <button class="tab-btn" onclick="switchTab('calendar')">日历</button>
+      <button class="tab-btn" onclick="switchTab('stats')">统计</button>
+    </div>
+  </header>
+
+  <div class="main-content">
+    <!-- SETUP -->
+    <div id="setup-panel" class="panel active">
+      <div class="setup-card">
+        <h2>人员排班设置</h2>
+        <div id="person-rows"></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="fillYear()">一键填充整年</button>
+          <button class="btn btn-secondary" onclick="resetAll()">重置</button>
+        </div>
+        <div class="hint">
+          每人周期：<b style="color:#d4a017">半天</b> → <b style="color:#e07b28">全天</b> → <b style="color:#e94560">24H</b> → <b>休</b> → <b>休</b>（5天一循环）<br>
+          周一~周五每天上午3人上班 · 周六日仅24H值班者上班
+        </div>
+      </div>
+    </div>
+
+    <!-- CALENDAR -->
+    <div id="calendar-panel" class="panel">
+      <div class="cal-nav">
+        <button onclick="prevMonth()">&#9664;</button>
+        <span class="month-year" id="month-year-label"></span>
+        <button onclick="nextMonth()">&#9654;</button>
+        <select onchange="jumpToDate()" id="month-select">
+          <option value="0">1月</option><option value="1">2月</option><option value="2">3月</option>
+          <option value="3">4月</option><option value="4">5月</option><option value="5">6月</option>
+          <option value="6">7月</option><option value="7">8月</option><option value="8">9月</option>
+          <option value="9">10月</option><option value="10">11月</option><option value="11">12月</option>
+        </select>
+        <select onchange="jumpToDate()" id="year-select"></select>
+        <button onclick="goToday()" style="border-radius:6px;width:auto;padding:0 10px;font-size:12px;">今天</button>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+      <div class="legend" id="legend-bar"></div>
+    </div>
+
+    <!-- STATS -->
+    <div id="stats-panel" class="panel">
+      <div class="stats-card">
+        <h2>排班统计</h2>
+        <div class="year-selector-stats">
+          <span>统计年份：</span>
+          <select id="stats-year" onchange="renderStats()"></select>
+        </div>
+        <div id="stats-content"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const HOLIDAYS = {
+  '2025-01-01':'元旦',
+  '2025-01-28':'除夕','2025-01-29':'春节','2025-01-30':'春节','2025-01-31':'春节',
+  '2025-02-01':'春节','2025-02-02':'春节','2025-02-03':'春节','2025-02-04':'春节',
+  '2025-04-04':'清明节','2025-04-05':'清明节','2025-04-06':'清明节',
+  '2025-05-01':'劳动节','2025-05-02':'劳动节','2025-05-03':'劳动节','2025-05-04':'劳动节','2025-05-05':'劳动节',
+  '2025-05-31':'端午节','2025-06-01':'端午节','2025-06-02':'端午节',
+  '2025-10-01':'国庆节/中秋','2025-10-02':'国庆节','2025-10-03':'国庆节','2025-10-04':'国庆节',
+  '2025-10-05':'国庆节','2025-10-06':'国庆节','2025-10-07':'国庆节','2025-10-08':'国庆节',
+
+  '2026-01-01':'元旦','2026-01-02':'元旦','2026-01-03':'元旦',
+  '2026-02-15':'春节','2026-02-16':'除夕','2026-02-17':'春节','2026-02-18':'春节','2026-02-19':'春节',
+  '2026-02-20':'春节','2026-02-21':'春节','2026-02-22':'春节','2026-02-23':'春节',
+  '2026-04-04':'清明节','2026-04-05':'清明节','2026-04-06':'清明节',
+  '2026-05-01':'劳动节','2026-05-02':'劳动节','2026-05-03':'劳动节','2026-05-04':'劳动节','2026-05-05':'劳动节',
+  '2026-06-19':'端午节','2026-06-20':'端午节','2026-06-21':'端午节',
+  '2026-09-25':'中秋节','2026-09-26':'中秋节','2026-09-27':'中秋节',
+  '2026-10-01':'国庆节','2026-10-02':'国庆节','2026-10-03':'国庆节','2026-10-04':'国庆节','2026-10-05':'国庆节','2026-10-06':'国庆节','2026-10-07':'国庆节',
+
+  '2027-01-01':'元旦',
+  '2027-02-05':'除夕','2027-02-06':'春节','2027-02-07':'春节','2027-02-08':'春节','2027-02-09':'春节','2027-02-10':'春节','2027-02-11':'春节',
+  '2027-04-05':'清明节',
+  '2027-05-01':'劳动节','2027-05-02':'劳动节','2027-05-03':'劳动节','2027-05-04':'劳动节','2027-05-05':'劳动节',
+  '2027-06-07':'端午节','2027-06-08':'端午节','2027-06-09':'端午节',
+  '2027-09-15':'中秋节','2027-09-16':'中秋节','2027-09-17':'中秋节',
+  '2027-10-01':'国庆节','2027-10-02':'国庆节','2027-10-03':'国庆节','2027-10-04':'国庆节','2027-10-05':'国庆节','2027-10-06':'国庆节','2027-10-07':'国庆节',
+
+  '2028-01-01':'元旦',
+  '2028-01-25':'除夕','2028-01-26':'春节','2028-01-27':'春节','2028-01-28':'春节','2028-01-29':'春节','2028-01-30':'春节','2028-01-31':'春节',
+  '2028-04-04':'清明节','2028-04-05':'清明节','2028-04-06':'清明节',
+  '2028-05-01':'劳动节','2028-05-02':'劳动节','2028-05-03':'劳动节','2028-05-04':'劳动节','2028-05-05':'劳动节',
+  '2028-05-28':'端午节','2028-05-29':'端午节','2028-05-30':'端午节',
+  '2028-09-24':'中秋节','2028-09-25':'中秋节','2028-09-26':'中秋节',
+  '2028-10-01':'国庆节','2028-10-02':'国庆节','2028-10-03':'国庆节','2028-10-04':'国庆节','2028-10-05':'国庆节','2028-10-06':'国庆节','2028-10-07':'国庆节',
+};
+
+const DEFAULT_COLORS = ['#e94560','#4ecdc4','#ffe66d','#a29bfe','#fd79a8'];
+const DEFAULT_NAMES = ['张三','李四','王五','赵六','陈七'];
+const SHIFT_LABEL = ['半天','全天','24H','休息','休息'];
+const SHIFT_WIDTH_CLASS = ['w-1','w-2','w-3','',''];
+
+let curYear = new Date().getFullYear();
+let curMonth = new Date().getMonth();
+let sched = null;
+let hiddenSet = new Set();
+let showHoliday = true;
+
+loadData();
+renderSetup();
+renderCalendar();
+renderStats();
+renderLegend();
+
+function loadData() {
+  const raw = localStorage.getItem('sched_v4');
+  if (raw) {
+    sched = JSON.parse(raw);
+    if (!sched.colors) sched.colors = [...DEFAULT_COLORS];
+    if (!sched.names) sched.names = [...DEFAULT_NAMES];
+    hiddenSet = new Set(sched.hidden || []);
+    showHoliday = sched.showHoliday !== false;
+  }
+}
+
+function getColors() {
+  if (sched && sched.colors && sched.colors.length === 5) return sched.colors;
+  return [...DEFAULT_COLORS];
+}
+
+function getNames() {
+  const names = [];
+  document.querySelectorAll('.person-row .person-name').forEach(inp => {
+    names.push(inp.value.trim() || DEFAULT_NAMES[names.length]);
+  });
+  return names;
+}
+
+function getLoadedNames() {
+  if (sched && sched.names && sched.names.length === 5) return sched.names;
+  return [...DEFAULT_NAMES];
+}
+
+function saveData(names) {
+  const data = { names: names || [...DEFAULT_NAMES], colors: [], starts: [] };
+  document.querySelectorAll('.person-row').forEach(row => {
+    data.colors.push(row.querySelector('.person-color-inp').value);
+    data.starts.push({
+      date: row.querySelector('.start-date').value,
+      shift: parseInt(row.querySelector('.start-shift').value)
+    });
+  });
+  localStorage.setItem('sched_v4', JSON.stringify(data));
+  sched = data;
+  sched.hidden = [...hiddenSet];
+  sched.showHoliday = showHoliday;
+  localStorage.setItem('sched_v4', JSON.stringify(sched));
+}
+
+function dateStr(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function parseDate(str) { const [y,m,d] = str.split('-').map(Number); return new Date(y, m-1, d); }
+function daysBetween(d1, d2) { return Math.round((d2 - d1) / 86400000); }
+
+function getShift(pi, date) {
+  if (!sched || !sched.starts || !sched.starts[pi]) return -1;
+  const st = sched.starts[pi];
+  if (!st.date) return -1;
+  const sd = parseDate(st.date);
+  const cycleStart = new Date(sd);
+  cycleStart.setDate(cycleStart.getDate() - st.shift);
+  const diff = daysBetween(cycleStart, date);
+  return ((diff % 5) + 5) % 5;
+}
+
+function getActualShift(pi, date) {
+  const shift = getShift(pi, date);
+  if (shift < 0 || shift >= 3) return shift;
+  const dow = date.getDay();
+  if ((dow === 0 || dow === 6) && shift !== 2) return 3;
+  return shift;
+}
+
+function getPeopleOnDate(date) {
+  const result = [];
+  const names = getLoadedNames();
+  const colors = getColors();
+  const dow = date.getDay();
+  const isWeekend = dow === 0 || dow === 6;
+  for (let i = 0; i < 5; i++) {
+    if (hiddenSet.has(i)) continue;
+    const shift = getShift(i, date);
+    if (shift < 0 || shift >= 3) continue;
+    if (isWeekend && shift !== 2) continue;
+    result.push({ index: i, name: names[i], shift, color: colors[i] });
+  }
+  return result;
+}
+
+function renderSetup() {
+  const names = getLoadedNames();
+  const colors = getColors();
+  const starts = sched ? (sched.starts || []) : [];
+  const container = document.getElementById('person-rows');
+  container.innerHTML = '';
+  for (let i = 0; i < 5; i++) {
+    const si = starts[i] || { date: '2025-01-01', shift: 0 };
+    container.innerHTML += `
+      <div class="person-row">
+        <input type="color" value="${colors[i]}" class="person-color-inp" title="自定义颜色">
+        <input type="text" value="${names[i]}" placeholder="姓名" class="person-name">
+        <span class="shift-label">起始日期</span>
+        <input type="date" value="${si.date}" class="start-date">
+        <span class="shift-label">该日班次</span>
+        <select class="start-shift">
+          <option value="0" ${si.shift===0?'selected':''}>半天</option>
+          <option value="1" ${si.shift===1?'selected':''}>全天</option>
+          <option value="2" ${si.shift===2?'selected':''}>24H</option>
+          <option value="3" ${si.shift===3?'selected':''}>休息</option>
+        </select>
+      </div>`;
+  }
+}
+
+function fillYear() {
+  saveData(getNames());
+  renderCalendar();
+  renderLegend();
+  renderStats();
+  switchTab('calendar');
+}
+
+function resetAll() {
+  if (!confirm('确定要重置所有排班数据？')) return;
+  sched = null;
+  hiddenSet = new Set();
+  showHoliday = true;
+  localStorage.removeItem('sched_v4');
+  curYear = new Date().getFullYear();
+  curMonth = new Date().getMonth();
+  renderSetup();
+  renderCalendar();
+  renderLegend();
+  renderStats();
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`.tab-btn[onclick*="${tab}"]`).classList.add('active');
+  document.getElementById(`${tab}-panel`).classList.add('active');
+  if (tab === 'calendar') { renderCalendar(); renderLegend(); }
+  if (tab === 'stats') renderStats();
+}
+
+function renderLegend() {
+  const names = getLoadedNames();
+  const colors = getColors();
+  const el = document.getElementById('legend-bar');
+  let html = '';
+  for (let i = 0; i < 5; i++) {
+    const chk = hiddenSet.has(i) ? '' : 'checked';
+    html += `<label class="legend-person" style="cursor:pointer" onclick="togglePerson(${i})">
+      <input type="checkbox" ${chk} class="legend-chk" onclick="event.stopPropagation()" onchange="togglePerson(${i})">
+      <div class="legend-person-dot" style="background:${colors[i]}"></div>${names[i]}
+    </label>`;
+  }
+  html += `<div class="legend-sep"></div>`;
+  html += `<div class="legend-bar-demo"><div class="demo-bar" style="width:14px;"></div>半天</div>`;
+  html += `<div class="legend-bar-demo"><div class="demo-bar" style="width:24px;"></div>全天</div>`;
+  html += `<div class="legend-bar-demo"><div class="demo-bar" style="width:34px;"></div>24H</div>`;
+  html += `<div class="legend-sep"></div>`;
+  html += `<label class="legend-person" style="cursor:pointer" onclick="toggleHoliday()">
+    <input type="checkbox" ${showHoliday?'checked':''} class="legend-chk" onclick="event.stopPropagation()" onchange="toggleHoliday()">
+    <div class="legend-holiday-dot"></div>节假日
+  </label>`;
+  el.innerHTML = html;
+}
+
+function togglePerson(i) {
+  if (hiddenSet.has(i)) hiddenSet.delete(i); else hiddenSet.add(i);
+  if (sched) { sched.hidden = [...hiddenSet]; localStorage.setItem('sched_v4', JSON.stringify(sched)); }
+  renderCalendar();
+  renderLegend();
+}
+
+function toggleHoliday() {
+  showHoliday = !showHoliday;
+  if (sched) { sched.showHoliday = showHoliday; localStorage.setItem('sched_v4', JSON.stringify(sched)); }
+  renderCalendar();
+  renderLegend();
+}
+
+function renderCalendar() {
+  document.getElementById('month-select').value = curMonth;
+  const ys = document.getElementById('year-select');
+  ys.innerHTML = '';
+  for (let y = curYear - 2; y <= curYear + 3; y++) {
+    ys.innerHTML += `<option value="${y}" ${y===curYear?'selected':''}>${y}年</option>`;
+  }
+  document.getElementById('month-year-label').textContent = `${curYear}年 ${curMonth+1}月`;
+
+  const firstDay = new Date(curYear, curMonth, 1);
+  const lastDay = new Date(curYear, curMonth + 1, 0);
+  const startDow = firstDay.getDay() || 7;
+  const today = new Date();
+  const todayStr = dateStr(today);
+
+  const grid = document.getElementById('cal-grid');
+  const heads = ['一','二','三','四','五','六','日'];
+  let html = heads.map((d, i) => `<div class="cal-header${i>=5?' weekend':''}">${d}</div>`).join('');
+
+  const prevEnd = new Date(curYear, curMonth, 0).getDate();
+  for (let i = 1; i < startDow; i++) {
+    html += buildCell(new Date(curYear, curMonth-1, prevEnd-startDow+i+1), true, todayStr);
+  }
+  for (let d = 1; d <= lastDay.getDate(); d++) {
+    html += buildCell(new Date(curYear, curMonth, d), false, todayStr);
+  }
+  const total = startDow - 1 + lastDay.getDate();
+  const rem = (7 - (total % 7)) % 7;
+  for (let d = 1; d <= rem; d++) {
+    html += buildCell(new Date(curYear, curMonth+1, d), true, todayStr);
+  }
+  grid.innerHTML = html;
+}
+
+function buildCell(date, otherMonth, todayStr) {
+  const dow = date.getDay();
+  const isWE = dow === 0 || dow === 6;
+  const isToday = dateStr(date) === todayStr;
+  const people = getPeopleOnDate(date);
+  const ds = dateStr(date);
+  const holidayName = showHoliday ? HOLIDAYS[ds] : null;
+
+  let cls = 'cal-cell';
+  if (otherMonth) cls += ' other-month';
+  if (isWE) cls += ' weekend';
+  if (isToday) cls += ' today';
+  if (holidayName) cls += ' holiday';
+
+  people.sort((a, b) => a.shift - b.shift);
+  let bars = '';
+  people.forEach(p => {
+    const wCls = SHIFT_WIDTH_CLASS[p.shift];
+    bars += `<div class="shift-bar ${wCls}" style="background:${p.color}" title="${p.name}: ${SHIFT_LABEL[p.shift]}">${p.name}·${SHIFT_LABEL[p.shift]}</div>`;
+  });
+
+  const holidayBadge = holidayName ? `<span class="holiday-badge" title="${holidayName}">${holidayName}</span>` : '';
+
+  return `<div class="${cls}"><div class="day-num">${date.getDate()}${holidayBadge}</div><div class="cal-bars">${bars}</div></div>`;
+}
+
+function prevMonth() { if (curMonth===0) { curMonth=11; curYear--; } else curMonth--; renderCalendar(); }
+function nextMonth() { if (curMonth===11) { curMonth=0; curYear++; } else curMonth++; renderCalendar(); }
+function jumpToDate() { curMonth=parseInt(document.getElementById('month-select').value); curYear=parseInt(document.getElementById('year-select').value); renderCalendar(); }
+function goToday() { const t=new Date(); curYear=t.getFullYear(); curMonth=t.getMonth(); renderCalendar(); }
+
+function renderStats() {
+  const sy = document.getElementById('stats-year');
+  sy.innerHTML = '';
+  const ny = new Date().getFullYear();
+  for (let y = ny - 2; y <= ny + 3; y++) {
+    sy.innerHTML += `<option value="${y}" ${y===ny?'selected':''}>${y}年</option>`;
+  }
+  const year = parseInt(sy.value);
+  const container = document.getElementById('stats-content');
+
+  if (!sched || !sched.starts) {
+    container.innerHTML = '<div class="empty-state"><h3>暂无数据</h3><p>请先在"设置"中配置排班并点击"一键填充整年"</p></div>';
+    return;
+  }
+
+  const names = getLoadedNames();
+  const colors = getColors();
+  const stats = names.map(() => ({ half:0, full:0, h24:0, rest:0 }));
+  const totals = { half:0, full:0, h24:0, rest:0 };
+  let totalDays = 0;
+
+  const start = new Date(year, 0, 1);
+  const end = new Date(year, 11, 31);
+  const d = new Date(start);
+
+  while (d <= end) {
+    totalDays++;
+    for (let i = 0; i < 5; i++) {
+      const s = getActualShift(i, d);
+      if (s === 0) { stats[i].half++; totals.half++; }
+      else if (s === 1) { stats[i].full++; totals.full++; }
+      else if (s === 2) { stats[i].h24++; totals.h24++; }
+      else { stats[i].rest++; totals.rest++; }
+    }
+    d.setDate(d.getDate() + 1);
+  }
+
+  let html = '<table class="stats-table"><thead><tr><th>姓名</th><th>半天</th><th>全天</th><th>24H</th><th>休息</th><th>总计</th></tr></thead><tbody>';
+  names.forEach((name, i) => {
+    const s = stats[i];
+    const sum = s.half + s.full + s.h24 + s.rest;
+    html += `<tr>
+      <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${colors[i]};margin-right:5px;vertical-align:middle;"></span><b>${name}</b></td>
+      <td>${s.half}天</td>
+      <td>${s.full}天</td>
+      <td>${s.h24}天</td>
+      <td>${s.rest}天</td>
+      <td>${sum}天</td>
+    </tr>`;
+  });
+  html += `<tr class="total-row"><td><b>合计</b></td><td>${totals.half}天</td><td>${totals.full}天</td><td>${totals.h24}天</td><td>${totals.rest}天</td><td>${totalDays*5}天人</td></tr>`;
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+</script>
+</body>
+</html>
