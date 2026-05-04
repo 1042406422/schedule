@@ -266,7 +266,7 @@ header h1 { font-size: 21px; font-weight: 700; letter-spacing: 2px; color: #e945
           <button class="btn btn-secondary" onclick="resetAll()">重置</button>
         </div>
         <div class="hint">
-          每人周期：<b style="color:#d4a017">半天</b> → <b style="color:#e07b28">全天</b> → <b style="color:#e94560">24H</b> → <b>休</b> → <b>休</b>（5天一循环）<br>
+          每人周期：<b style="color:#d4a017">半天</b> → <b style="color:#e07b28">全天</b> → <b style="color:#e94560">24H</b> → <b style="color:#888">下夜班</b> → <b>休</b>（5天一循环）<br>
           周一~周五每天上午3人上班 · 周六日仅24H值班者上班
         </div>
       </div>
@@ -344,7 +344,7 @@ const HOLIDAYS = {
 
 const DEFAULT_COLORS = ['#e94560','#4ecdc4','#ffe66d','#a29bfe','#fd79a8'];
 const DEFAULT_NAMES = ['张三','李四','王五','赵六','陈七'];
-const SHIFT_LABEL = ['半天','全天','24H','休息','休息'];
+const SHIFT_LABEL = ['半天','全天','24H','下夜班','休息'];
 const SHIFT_WIDTH_CLASS = ['w-1','w-2','w-3','',''];
 
 let curYear = new Date().getFullYear();
@@ -423,7 +423,7 @@ function getActualShift(pi, date) {
   const shift = getShift(pi, date);
   if (shift < 0 || shift >= 3) return shift;
   const dow = date.getDay();
-  if ((dow === 0 || dow === 6) && shift !== 2) return 3;
+  if ((dow === 0 || dow === 6) && shift !== 2) return 4;
   return shift;
 }
 
@@ -465,7 +465,8 @@ function renderSetup() {
             <option value="0" ${si.shift===0?'selected':''}>半天</option>
             <option value="1" ${si.shift===1?'selected':''}>全天</option>
             <option value="2" ${si.shift===2?'selected':''}>24H</option>
-            <option value="3" ${si.shift===3?'selected':''}>休息</option>
+            <option value="3" ${si.shift===3?'selected':''}>下夜班</option>
+            <option value="4" ${si.shift===4?'selected':''}>休息</option>
           </select>
         </div>
       </div>`;
